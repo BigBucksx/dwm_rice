@@ -65,9 +65,9 @@ static const int resizehints = 1;    /* 1 means respect size hints in tiled resi
 
 static const Layout layouts[] = {
 	/* symbol     arrange function */
-	{ "[T]",      tile },    /* first entry is default */
-	{ "~F~",      NULL },    /* no layout function means floating behavior */
-	{ "[M]",      monocle },
+	{ "+",      tile },    /* first entry is default */
+	{ "~",      NULL },    /* no layout function means floating behavior */
+	{ "o",      monocle },
 };
 
 /* key definitions */
@@ -84,11 +84,21 @@ static const Layout layouts[] = {
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", color[Gray1], "-nf", color[Gray3], "-sb", color[Cyan], "-sf", color[Gray4], NULL };
-static const char *termcmd[]  = { "/usr/local/bin/st", NULL };
+//static const char *termcmd[]  = { "/usr/local/bin/st", NULL };
+static const char *termcmd[]  = { "/usr/bin/urxvt", NULL };
 static const char *wallpaper[] = { "/usr/local/bin/wallpaper", NULL };
 static const char *volup[] = {"/bin/pamixer", "-i", "5", NULL};
 static const char *voldn[] = {"/bin/pamixer", "-d", "5", NULL};
 static const char *voltg[] = {"/bin/pamixer", "-t", NULL};
+
+/* Startup programs */
+static const char *slstatus[] = { "/usr/local/bin/slstatus", NULL };
+static const char *picom[] = { "/usr/bin/picom", "--config", "/home/ivan/.config/picom.conf", NULL};
+
+Arg startup[] = {
+	{.v = slstatus},
+	{.v = picom}
+};
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
