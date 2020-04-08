@@ -2301,7 +2301,7 @@ main(int argc, char *argv[])
 	checkotherwm();
 	setup();
 
-	for(int i=0; i < 2; i++)
+	for(int i=0; i < LENGTH(startup); i++)
 		spawn(&startup[i]);
 
 #ifdef __OpenBSD__
