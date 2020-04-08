@@ -116,7 +116,7 @@ static const char *voldn[] = {"/bin/pamixer", "-d", "5", NULL};
 static const char *voltg[] = {"/bin/pamixer", "-t", NULL};
 
 /* Startup programs */
-static const char *slstatus[] = { "/home/ivan/Desktop/slstatus/slstatus", NULL };
+static const char *slstatus[] = { "/usr/local/bin/slstatus", NULL };
 static const char *picom[] = { "/usr/bin/picom", "--config", "/home/ivan/.config/picom.conf", NULL};
 
 Arg startup[] = {
