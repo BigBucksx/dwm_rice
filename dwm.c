@@ -86,6 +86,7 @@ typedef struct Monitor Monitor;
 typedef struct Client Client;
 struct Client {
 	char name[256];
+	char icon[256];
 	float mina, maxa;
 	int x, y, w, h;
 	int oldx, oldy, oldw, oldh;
@@ -138,6 +139,7 @@ typedef struct {
 	const char *class;
 	const char *instance;
 	const char *title;
+	const char *icon;
 	unsigned int tags;
 	int isfloating;
 	int monitor;
@@ -166,6 +168,8 @@ static Monitor *dirtomon(int dir);
 static void drawbar(Monitor *m);
 static void clearstatus(Monitor *m);
 static int  drawstatus(Monitor *m);
+void single_slot(char *text, int x, int wt, int sw, int w, int clrsch);
+void create_slots(Monitor *m,int nslots, int start_x, int status_width);
 static void drawbars(void);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
@@ -306,6 +310,12 @@ applyrules(Client *c)
 		{
 			c->isfloating = r->isfloating;
 			c->tags |= r->tags;
+
+			if(r->icon!= NULL)
+				strcpy(c->icon, r->icon);
+			else
+				strcpy(c->icon, DEFAULT_ICON);
+
 			for (m = mons; m && m->num != r->monitor; m = m->next);
 			if (m)
 				c->mon = m;
@@ -708,10 +718,8 @@ dirtomon(int dir)
 void
 drawbar(Monitor *m)
 {
-	int x, w, wt, sw = 0;
+	int x, w, sw = 0;
 	unsigned int i, occ = 0, urg = 0, n = 0;
-	int boxs = drw->fonts->h / 9;
-	int boxw = drw->fonts->h / 6 + 2;
 
 	plw = drw->fonts->h / 2 + 1;
 	Client *c;
@@ -722,7 +730,6 @@ drawbar(Monitor *m)
 
 	/* draw status first so it can be overdrawn by tags later */
 	if (m == selmon) { /* status is only drawn on selected monitor */
-		drw_setscheme(drw, scheme[SchemeNorm]);
 		sw = drawstatus(m);
 	}
 
@@ -738,7 +745,7 @@ drawbar(Monitor *m)
 	for (i = 0; i < LENGTH(tags); i++) {
 		w = TEXTW(tags[i]);
 		drw_settrans(drw, prevscheme, (nxtscheme = scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]));
-                drw_arrow(drw, x, 0, plw, bh, 1, 0);
+		drw_arrow(drw, x, 0, plw, bh, 1, 1);
                 x += plw;
 
                 drw_setscheme(drw, nxtscheme);
@@ -750,34 +757,55 @@ drawbar(Monitor *m)
         nxtscheme = scheme[SchemeNorm];
 
         drw_settrans(drw, prevscheme, nxtscheme);
-        drw_arrow(drw, x, 0, plw, bh, 1, 0);
+        drw_arrow(drw, x, 0, plw, bh, 1, 1);
         x += plw;
 
 	w = blw = TEXTW(m->ltsymbol);
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
- 	if ((m->ww - sw - x) > bh && n > 0) {
-                wt = (m->ww - sw - x) / n - 2 * plw;
-                for (c = m->clients; c; c = c->next) {
-                        if (!ISVISIBLE(c)) continue; /* only show titles of windows on current tag */
-
-			drw_setscheme(drw, c == m->sel ? scheme[SchemeTitleSel] : scheme[SchemeTitle]);
-			drw_text(drw, x + plw, 0, wt, bh, lrpad / 2, c->name, 0);
-
-                        drw_settrans(drw, c == m->sel ? scheme[SchemeTitleSel] : scheme[SchemeTitle], scheme[SchemeNorm]);
-			drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
-
-                        x += wt + 2 * plw;
-                } 
-        } else { /* when empty or not enough space to draw, clear out the title space */
-               drw_setscheme(drw, scheme[SchemeNorm]);
-                drw_rect(drw, x, 0, m->ww - sw - x, bh, 1, 1);
-        }      
+	create_slots(m, 6, x, sw);
 
         drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
 
+void 
+single_slot(char *text, int x, int wt, int sw, int w, int clrsch)
+{
+	plw = drw->fonts->h / 2 + 1;
+	drw_setscheme(drw, scheme[clrsch]);
+	drw_text(drw, x + plw, 0, wt, bh, lrpad / 2, text, 0);
+
+	drw_settrans(drw, scheme[clrsch], scheme[SchemeNorm]);
+	drw_arrow(drw, x, 0, plw, bh, 0, 1);
+}
+
+void
+create_slots(Monitor *m,int nslots, int start_x, int status_width)
+{
+	Client *c = m->clients;
+
+	int nclients = 0;
+	int x = start_x;
+	int w = TEXTW(m->ltsymbol);
+	int sw = status_width;
+	int wt = (m->ww - sw - x) / nslots;
+
+	while(c) {
+		if(ISVISIBLE(c)) {
+			single_slot(c->icon, x, wt, sw, w, c==m->sel ? SchemeTitleSel : SchemeTitle);
+			x += wt;
+			nclients++;
+		}
+		c = c->next;
+	}
+	
+	for(int i=0; i < (nslots-nclients); i++) {
+		single_slot(" ", x, wt, sw, w, SchemeTitle);		
+		x += wt;
+	}
+	drw_arrow(drw, x, 0, plw, bh, 1, 1);
+}
 void
 clearstatus(Monitor *m)
 {
@@ -801,11 +829,13 @@ drawstatus(Monitor* m)
         int x = m->ww, w = 0;
         char *bs, bp = '|';
         Clr *prevscheme = statusscheme[0], *nxtscheme;
-
+	int close_segment[2] = {0, 0};
         strcpy(status, stext);
+	bs = &status[n];
 
-        for (i = n, bs = &status[n-1]; i >= 0; i--, bs--) {
-            if (*bs == '<' || *bs == '/' || *bs == '\\' || *bs == '|') { /* block start */
+	  for (i = 0; i <= n; i++) {
+	    bs--;
+            if (*bs == '<' || *bs == '/' || *bs == '\\' || *bs == '|') { // block start 
                 cn = ((int) *(bs+1)) - 1;
 
                 if (cn < LENGTH(statuscolors)) {
@@ -816,12 +846,24 @@ drawstatus(Monitor* m)
 
                 if (bp != '|') {
                     drw_arrow(drw, x - plw, 0, plw, bh, bp == '\\' ? 1 : 0, bp == '<' ? 0 : 1);
+		    if(bp == '\\') {
+			close_segment[0] = 1;
+		    } else {
+			close_segment[0] = 0;
+		    }
+		    if(bp == '<') {
+			close_segment[1] = 0;
+		    } else {
+			close_segment[1] = 1;
+		    }
                     x -= plw;
                 }
 
                 drw_setscheme(drw, nxtscheme);
                 w = TEXTW(bs+2);
                 drw_text(drw, x - w, 0, w, bh, lrpad / 2, bs+2, 0);
+                drw_arrow(drw, x - plw, 0, plw, bh, close_segment[0], close_segment[1]);
+		//x -= plw;
                 x -= w;
 
                 bp = *bs;
@@ -829,6 +871,7 @@ drawstatus(Monitor* m)
                 prevscheme = nxtscheme;
             }
         }
+
         if (bp != '|') {
             drw_settrans(drw, prevscheme, scheme[SchemeNorm]);
             drw_arrow(drw, x - plw, 0, plw, bh, bp == '\\' ? 1 : 0, bp == '<' ? 0 : 1);
@@ -1126,6 +1169,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->w = c->oldw = wa->width;
 	c->h = c->oldh = wa->height;
 	c->oldbw = wa->border_width;
+	strcpy(c->icon, DEFAULT_ICON);
 
 	updatetitle(c);
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
