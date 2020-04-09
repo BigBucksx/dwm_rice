@@ -1,10 +1,13 @@
 /* See LICENSE file for copyright and license details. */
 #include <X11/XF86keysym.h>
+
 #define FIREFOX_ICON		"\uf269"
 #define TERMINAL_ICON		"\uf120"
 #define ECLIPSE_ICON		"\ue69e"
 #define DEFAULT_ICON		"\uf2d0"
 #define TRANSMISSION_ICON	"\uf076"
+#define MUPDF_ICON		"\uf1c1"
+#define VIFM_ICON		"\uf318"
 
 static const char icons [][3] = {FIREFOX_ICON, TERMINAL_ICON, ECLIPSE_ICON};
 /* appearance */
@@ -21,7 +24,7 @@ static const char *fonts[]          = { "fontawesome-regular:size=12",
 */
 static const char *fonts[] = { "fontawesome-regular:size=14"};
 static const char dmenufont[]       = "monospace:size=10";
-enum {Gray1, Gray2, Gray3, Gray4, Cyan, LightCyan, Magenta, LightMagenta, Blue, LightBlue, Red, LightRed, Green, LightGreen};
+enum {Gray1, Gray2, Gray3, Gray4, Cyan, LightCyan, Magenta, LightMagenta, Blue, LightBlue, Red, LightRed, Green, LightGreen, SolBlue, SolWhite};
 
 static const char color[][8] = {
 	"#393939", /*gray1*/
@@ -36,31 +39,31 @@ static const char color[][8] = {
 	"#00AFDA", /*lightBlue*/
 	"#BF1E2D", /*red*/
 	"#E7515A", /*light red*/
-	"#9DBA3A", /*green*/
+	"#78AB46", /*green*/
 	"#A9C938", /*light green*/
+	"#073642", /*base02 solarized*/
+	"#586E75", /*base2 */
 };
 
 static const char *colors[][3]      = {
 	/*					fg         bg          border   */
-	[SchemeNorm]    = { color[Gray3], color[Gray1], color[Gray4] },
+	[SchemeNorm]    = { color[Gray3], color[SolWhite], color[Gray4] },
 //	[SchemeNorm]	= { color[Gray1], color[Gray2], color[Gray1] },
 //	[SchemeSel]     = { color[Gray2], color[LightBlue], color[Blue]},
-	[SchemeSel]	= { color[Gray1], color[Gray4], color[Gray1]},
+	[SchemeSel]	= { color[SolWhite], color[SolBlue], color[SolWhite]},
 	[SchemeTitle]   = { color[Gray3], color[Gray2], color[Blue]},
 	[SchemeTitleSel]= { color[Red], color[Gray3], color[Blue]},
 };
 
 static const char *statuscolors[][13] = {
-	{ color[Gray1], color[Gray3], color[Gray2] }, /* \x01 dark*/
-	{ color[Gray1], color[Gray3], color[Gray4] }, /* \x02 light*/ /*za statusbar */
-	{ color[Gray1], color[Gray2], color[Gray1] }, /* \x03 za ikone*/
-	{ color[Gray1], color[Gray4], color[Gray1] }, /* \x04 (\x05) za treutni workspace */
-	//{ color[Gray3], color[Gray4], color[Gray2] }, /* \x05 (\x07)*/
-	{ color[Gray1], color[Gray4], color[Gray2] }, /* \x05 (\x07)*/
-
-	{ color[Gray1], color[LightBlue], color[Blue] },
+	{ color[Gray1], color[Gray3], color[Gray2] }, 		/* \x01 dark*/
+	{ color[Gray1], color[Gray3], color[Gray4] }, 		/* \x02 light*/ /*za statusbar */
+	{ color[Gray1], color[Gray2], color[Gray1] }, 		/* \x03 za ikone*/
+	{ color[Gray1], color[Gray4], color[Gray1] }, 		/* \x04 za treutni workspace */
+	{ color[Gray1], color[Gray4], color[Gray2] }, 		/* \x05 */
+	{ color[SolWhite], color[SolBlue], color[SolBlue] },
 	{ color[Gray1], color[LightRed], color[Red] },
-	{ color[Gray1], color[LightGreen], color[Green] },
+	{ color[SolWhite], color[Green], color[Green] },
 	{ color[Gray1], color[LightMagenta], color[Magenta]},
 };
 
@@ -73,12 +76,13 @@ static const Rule rules[] = {
 	 *	WM_NAME(STRING) = title
 	 */
 	/* class      instance    title       icon		tags mask     isfloating   monitor */
-	{ "Gimp",     NULL,       NULL,       NULL,	 	0,		1,           -1 },
 	{ "firefox",  NULL,       NULL,       FIREFOX_ICON,	1 << 4,       	1,           -1 },
 	{ "Eclipse",  NULL,  	  NULL,       ECLIPSE_ICON,     1 << 3,         0,           -1 },
 	{ "URxvt",    NULL,       NULL,       TERMINAL_ICON,    0,              0,           -1 },
 	{ "st",       NULL,       NULL,       TERMINAL_ICON,    0,              0,           -1 },
 	{ "Transmission", NULL,   NULL,       TRANSMISSION_ICON,1 << 3,         0,           -1 },
+	{ "mupdf",	NULL,	  NULL,	      MUPDF_ICON,       0,              1,           -1 },
+	{ NULL,	      NULL,       "vifmrun",    VIFM_ICON,        0,              1,           -1 },
 };
 
 /* layout(s) */
@@ -107,14 +111,15 @@ static const Layout layouts[] = {
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", color[Gray1], "-nf", color[Gray3], "-sb", color[Cyan], "-sf", color[Gray4], NULL };
-//static const char *termcmd[]  = { "/usr/local/bin/st", NULL };
-static const char *termcmd[]  = { "/usr/bin/urxvt", NULL };
+static const char *termcmd[]  = { "/usr/local/bin/st", NULL };
+static const char *filemg[] = {"/usr/local/bin/st", "-e", "vifmrun"};
+//static const char *termcmd[]  = { "/usr/bin/urxvt", NULL };
 static const char *wallpaper[] = { "/home/ivan/.bin/wallpaper", NULL };
 static const char *browsercmd[] = { "/usr/bin/firefox", NULL };
 static const char *volup[] = {"/bin/pamixer", "-i", "5", NULL};
 static const char *voldn[] = {"/bin/pamixer", "-d", "5", NULL};
 static const char *voltg[] = {"/bin/pamixer", "-t", NULL};
-
+static const char *scrot[] = {"/bin/scrot", "'%Y-%m-%%d_$wx$h.png'", "-e", "mv $f ~/Pictures/Screenshots", NULL};
 /* Startup programs */
 static const char *slstatus[] = { "/usr/local/bin/slstatus", NULL };
 static const char *picom[] = { "/usr/bin/picom", "--config", "/home/ivan/.config/picom.conf", NULL};
@@ -130,6 +135,8 @@ static Key keys[] = {
 	{ MODKEY|ControlMask,           XK_t, 	   spawn,          {.v = termcmd } },
 	{ MODKEY,			XK_w,	   spawn,	   {.v = wallpaper} },
 	{ MODKEY|ControlMask,		XK_b,	   spawn,	   {.v = browsercmd} },
+	{ MODKEY|ControlMask,		XK_f,	   spawn,	   {.v = filemg} },
+	{ MODKEY|ControlMask,		XK_s,      spawn,          {.v = scrot}  },
 	{ 0,				XF86XK_AudioRaiseVolume, spawn, {.v = volup} },
 	{ 0,				XF86XK_AudioLowerVolume, spawn, {.v = voldn} },
 	{ 0, 				XF86XK_AudioMute,	 spawn, {.v = voltg} },

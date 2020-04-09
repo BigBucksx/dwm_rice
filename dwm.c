@@ -55,7 +55,7 @@
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw)
 #define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
-#define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
+#define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad + 4)
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
@@ -168,8 +168,8 @@ static Monitor *dirtomon(int dir);
 static void drawbar(Monitor *m);
 static void clearstatus(Monitor *m);
 static int  drawstatus(Monitor *m);
-void single_slot(char *text, int x, int wt, int sw, int w, int clrsch);
-void create_slots(Monitor *m,int nslots, int start_x, int status_width);
+void single_slot(char *text, int x, int wt, int clrsch);
+void create_slots(Monitor *m, int start_x, int status_width);
 static void drawbars(void);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
@@ -764,44 +764,54 @@ drawbar(Monitor *m)
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
-	create_slots(m, 6, x, sw);
+	create_slots(m, x, sw);
 
         drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
 
 void 
-single_slot(char *text, int x, int wt, int sw, int w, int clrsch)
+single_slot(char *text, int x, int wt, int clrsch)
 {
 	plw = drw->fonts->h / 2 + 1;
 	drw_setscheme(drw, scheme[clrsch]);
-	drw_text(drw, x + plw, 0, wt, bh, lrpad / 2, text, 0);
+
+	if(text == NULL)
+		drw_text(drw, x + plw, 0, wt, bh, lrpad / 2, " ", 0);
+	else
+		drw_text(drw, x + plw, 0, wt, bh, lrpad / 2, text, 0);
 
 	drw_settrans(drw, scheme[clrsch], scheme[SchemeNorm]);
 	drw_arrow(drw, x, 0, plw, bh, 0, 1);
 }
 
 void
-create_slots(Monitor *m,int nslots, int start_x, int status_width)
+create_slots(Monitor *m, int start_x, int status_width)
 {
 	Client *c = m->clients;
 
 	int nclients = 0;
 	int x = start_x;
-	int w = TEXTW(m->ltsymbol);
 	int sw = status_width;
-	int wt = (m->ww - sw - x) / nslots;
+//	int wt = (m->ww - sw - x) / nslots;
+	int wt = TEXTW(DEFAULT_ICON);
+	int nslots = (m->ww - sw -x) / wt;
 
+	int i = 0;
 	while(c) {
 		if(ISVISIBLE(c)) {
-			single_slot(c->icon, x, wt, sw, w, c==m->sel ? SchemeTitleSel : SchemeTitle);
+			if(i > nslots - 1) 
+				break;
+
+			single_slot(c->icon, x, wt, c==m->sel ? SchemeTitleSel : SchemeTitle);
 			x += wt;
 			nclients++;
 		}
+		i++;
 		c = c->next;
 	}
 	
 	for(int i=0; i < (nslots-nclients); i++) {
-		single_slot(" ", x, wt, sw, w, SchemeTitle);		
+		single_slot(NULL, x, wt, SchemeTitle);		
 		x += wt;
 	}
 	drw_arrow(drw, x, 0, plw, bh, 1, 1);
